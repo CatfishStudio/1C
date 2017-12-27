@@ -1,0 +1,613 @@
+<HTML>
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; CHARSET=Windows-1251">
+<TITLE>Электронная накладная</TITLE>
+</HEAD>
+
+<STYLE>
+.BasicTable
+{
+	COLOR: #000000;
+    FONT-FAMILY: Verdana;
+    FONT-SIZE: 20px;
+}
+.menuTable
+{
+	COLOR: #000000;
+    FONT-FAMILY: Verdana;
+    FONT-SIZE: 12px;
+    CURSOR: hand;
+}
+.simpleTable
+{
+	COLOR: #000000;
+    FONT-FAMILY: Verdana;
+    FONT-SIZE: 12px;
+    CURSOR: hand;
+}
+.anr
+{
+	FONT-SIZE: 20px;
+}
+DIV
+{
+	COLOR: #000000;
+    FONT-FAMILY: Verdana;
+    FONT-SIZE: 13px;
+}
+</STYLE>
+
+<SCRIPT  language=JScript>
+
+var xFile;
+var pArrayMenu = new Array(5);
+var pMenu = new Array(2);
+var xTimer;
+var xTimerLogo;
+var xTimerTitle;
+var xIndLogo = -1;
+
+xLogo = new Array(4)
+xLogo[0] = "АНР";
+xLogo[1] = "<b>А</b>ссоциация <b>н</b>езависимых <b>р</b>азработчиков";
+xLogo[2] = "585-1277<br>528-6127<br><a href=\"mailto:anr@anr.ua\">anr@anr.ua<a>";
+xLogo[3] = "";
+
+function playLogo()
+{
+	xIndLogo ++;
+	if (xIndLogo == xLogo.length) xIndLogo = 0;
+
+	if (xIndLogo == 0)
+	{ TxtANR.style.fontSize = "40px"; 	} else { TxtANR.style.fontSize = "15px";}
+	
+	TxtANR.filters[0].apply();
+	TxtANR.innerHTML = xLogo[xIndLogo];
+	TxtANR.filters[0].play();
+
+	if (xIndLogo == (xLogo.length-1)) pTime = 2000; else pTime = 10000;
+	xTimerLogo = setTimeout("playLogo()", pTime);
+}
+
+function playTitle()
+{
+	if ( TxtTitle.filters.glow.enabled == 1 ) TxtTitle.filters.glow.enabled = 0;
+
+	if (TxtTitle.filters.glow.color == 0xFFFF00)
+		TxtTitle.filters.glow.color = 0xFF0000;
+	else
+		TxtTitle.filters.glow.color = 0xFFFF00;
+
+	if ( TxtTitle.filters.blendTrans.status == 0 )
+	{
+		TxtTitle.filters.blendTrans.Apply();
+		TxtTitle.filters.glow.enabled=1;
+		TxtTitle.filters.blendTrans.Play();
+	}
+	xTimerTitle = setTimeout("playTitle()", 20000);
+}
+
+
+function isMenu(prStr)
+{
+	if (prStr.substr(0, 4) == "Menu") return (parseInt(pEl.id.substr(4))) ;
+	return 0;
+}
+
+function ShowHide(prNum,prVis)
+{
+	pItem = "document.all['TMenu'+prNum].style";
+	eval(pItem).visibility = (prVis==1 ? "visible" : "hidden");
+}
+
+function HideAll()
+{
+	ShowHide(4,0);ShowHide(5,0);
+	for (i=1; i<6; i++) document.all["Menu"+i].style.backgroundColor = 0xf5f5f5;
+	for (i in pMenu) 
+		for (j=1; j<pMenu[i].QItem+1; j++)
+			document.all["Menu"+pMenu[i].NumMenu+j].style.backgroundColor = 0xf5f5f5;
+}
+
+function DocMouseOver()
+{
+	pEl = window.event.srcElement;
+	pType = isMenu(pEl.id);
+	if (pType)
+	{
+		pTMenu = parseInt(pType / 10, 0);
+		if (xTimer)
+		{
+			clearTimeout(xTimer); HideAll();
+			if (pTMenu)
+			{
+				ShowHide(pTMenu, 1);
+				document.all["Menu"+pTMenu].style.backgroundColor = 0xC0C0C0;
+			}
+		}
+		pEl.style.backgroundColor = 0xC0C0C0;
+		if ((pType > 3) && (pType < 9)) ShowHide(pType,1);
+	}
+}
+function DocMouseOut()
+{
+	pEl = window.event.srcElement;
+	if (isMenu(pEl.id)) xTimer = setTimeout("HideAll()", 500);
+}
+
+function DocMouseOutClick()
+{
+	pEl = window.event.srcElement;
+	pType = isMenu(pEl.id);
+	if (pType)
+	{
+		if ((pType > 3) && (pType < 9)) return;
+		
+		pTMenu = parseInt(pType / 10, 0);
+		pNum = pType % 10;
+		
+		pInd = pNum;
+		if (pTMenu == 4)
+		{
+			if (pNum > 1) { alert("Скоро будет!"); return;}
+			pInd=4; 
+			FillElementArray(pInd-1, 1);
+
+		}
+		if (pTMenu == 5)
+		{
+			pInd=5; 
+			FillElementArray(pInd-1, pNum);
+		}
+		
+		for (i=1; i<6; i++) document.all["Menu"+i].style.fontWeight = 400;
+		
+		Div1.innerHTML = pArrayMenu[pInd-1];
+		
+		pInd = ( pTMenu ? pTMenu : pNum);
+		
+		document.all["Menu"+pInd].style.fontWeight = 700;
+		HideAll();
+	}
+}
+
+function AddStrField(prValue)
+{
+	this.Value[this.Value.length] = prValue;
+}
+
+function SetStrField(prName, prComment, prType, prWidth, prDecimal)
+{
+	i = this.Name.length;
+	this.Name[i] = prName;
+	this.Comment[i] = prComment;
+	this.Type[i] = prType;
+	this.Width[i] = prWidth;
+	this.Decimal[i] = prDecimal;
+}
+
+function ParseStrField(prStr)
+{
+	prStr = prStr + "\t";
+	pPos = prStr.search("\t");
+	while (pPos != -1)
+	{
+		pPart = prStr.substr(0, pPos);
+		this.Value[this.Value.length] = ""+pPart;
+		prStr = prStr.substr(pPos+1);
+		pPos = prStr.search("\t");
+	}
+}
+
+function StrField()
+{
+	this.Add = AddStrField;
+	this.Set = SetStrField;
+	this.Parse = ParseStrField;
+	this.Value = new Array();
+	this.Name = new Array();
+	this.Comment = new Array();
+	this.Type = new Array();
+	this.Width = new Array();
+	this.Decimal = new Array();
+}
+
+function AddDetail()
+{
+	this.Detail[this.Detail.length] = new StrField;
+}
+
+function FileMMO()
+{
+	this.Head = new StrField;
+	this.Doc = new StrField;
+	this.Comment = new StrField;
+	this.Column = new StrField;
+	this.Detail = new Array();
+	this.Add = AddDetail; 
+}
+
+function MakeSmallTable(prColor, prSize, prValue)
+{
+	pRet = "<br><table class=simpleTable bgColor="+prColor+" border=0 width=\"100%\" ><TR><TD><FONT size="+prSize+">"+prValue+"</font></td></tr></table>"
+	return pRet;
+}
+
+function GetSubString(prStr, prChar)
+{
+	var pSub = new Array();
+	pPoz = prStr.search(pEnter);
+	pNum = 0;
+	while (pPoz != -1)
+	{
+		pSub[pSub.length] = prStr.substr(0, pPoz);
+		prStr = prStr.substr(pPoz+prChar.length);
+		pPoz = prStr.search(pEnter);
+	}
+	if (prStr.length) pSub[pSub.length] = prStr;
+	return pSub;
+}
+
+function EncodeText(prStr, prNum)
+{
+	switch (prNum)
+	{
+		case 1: xFile.Head.Parse(prStr); break;
+		case 2: xFile.Doc.Parse(prStr); break;
+		case 3: xFile.Comment.Add(prStr); break;
+		default: 
+			if (!prStr.length) break;
+			xFile.Add();
+			xFile.Detail[xFile.Detail.length-1].Parse(prStr); 
+		break;
+	}
+}
+
+function readfile(prType)
+{
+	var fso, f;
+	
+	xFileConstructor();
+		
+	if (prType == 1)
+	{
+		pFileName = document.all.item("filename").value;
+		if (pFileName.length < 5)
+		{
+			alert ("Не указано имя файла!");
+			return;
+		}
+		fso = new ActiveXObject("Scripting.FileSystemObject");
+		if (!fso.FileExists(pFileName))
+		{
+			alert ("Файл не найден!");
+			return;
+		}
+		f = fso.OpenTextFile(pFileName, 1);
+		
+		while (!f.AtEndOfStream)
+		{
+			s = ""+f.ReadLine();
+			EncodeText(s, f.Line-1);
+		}
+
+		f.Close( );
+	}
+	else
+	{
+		pFileName = "";
+		pEnter = String.fromCharCode(13, 10);
+		f = GetSubString(TxtFile.value, pEnter);
+		for (i=0; i<f.length; i++)
+		{
+			EncodeText(f[i], i+1);
+		}
+	}
+	
+	pDocHTML = "";
+	
+	pDocHTML += MakeSmallTable("#f5f5f5", 3, "Анализ файла ["+pFileName+"]");
+	// pDocHTML ("<hr>");
+	pDocHTML += MakeSmallTable("#ADD8E6", 2, "Заголовок документа");
+
+	pDocHTML += "<table class=simpleTable border=1 cellPadding=1 cellSpacing=1>";
+	for (i in xFile.Head.Name)
+	{
+		pDocHTML += "<tr><td>"+xFile.Head.Name[i]+"</td><td>"+xFile.Head.Value[i]+"&nbsp;</td></tr>";
+	}
+	pDocHTML += "</table>";
+	pDocHTML += MakeSmallTable("#ADD8E6", 2, "Реквизиты документа");
+	pDocHTML += "<table class=simpleTable border=1 cellPadding=1 cellSpacing=1>";
+	for (i in xFile.Doc.Name)
+	{
+		pDocHTML += "<tr><td>"+xFile.Doc.Name[i]+"</td><td>"+xFile.Doc.Value[i]+"&nbsp;</td></tr>";
+	}
+	pDocHTML += "</table>";
+	pDocHTML += MakeSmallTable("#ADD8E6", 2, "Строки документа");
+	pDocHTML += "<table class=simpleTable border=1 cellPadding=1 cellSpacing=1>";
+	pDocHTML += "<tr>";
+	for (i in xFile.Column.Name) pDocHTML += "<td><b>"+xFile.Column.Name[i]+"</b></td>";
+	pDocHTML += "</tr>";
+	for (i in xFile.Detail)
+	{
+		pDocHTML += "<tr>";
+		for (j in xFile.Detail[i].Value)
+		{
+			pDocHTML += "<td>"+xFile.Detail[i].Value[j]+"&nbsp;</td>";
+		}
+		pDocHTML += "</tr>";	
+	}
+	
+	pDocHTML += "</table>";
+	
+	Div1.innerHTML = pDocHTML;
+}
+
+function change()
+{
+	pHeight = document.body.clientHeight;
+	pWidth = document.body.clientWidth;
+	
+	if (pWidth > 500 && pHeight > 300)
+	{ 
+		MainTable.width = pWidth - 20;
+		MainTable.height = pHeight - 20;
+		Div1.style.height = pHeight - parseInt(Div1.style.top)-12;
+		Div1.style.width = pWidth - parseInt(Div1.style.left)-12;
+	}
+	
+	if (!xTimerLogo) playLogo();
+	if (!xTimerTitle) playTitle();
+}
+
+pHelp_2_16 = ""+
+"<b>1. - Товар.</b> Это значит, что товары с одинаковым названием имеют разный ID"+
+"<br>Пример:"+
+"<table class=simpleTable border=1 cellPadding=1 cellSpacing=1 >"+
+"<tr><td>ID_Товара</td><td>Наим. товара</td><td>ID_Произв</td><td>Наим. производителя</td></tr>"+
+"<tr><td>758001</td><td>Аспаркам N50 табл</td><td>6877</td><td>Галичфарм</td></tr>"+			
+"<tr><td>830405</td><td>Аспаркам N50 табл</td><td>7734</td><td>Здоров`я</td></tr>"+
+"<tr><td>834233</td><td>Аспаркам N50 табл</td><td>7464</td><td>Луганський ХФЗ</td></tr>"+
+"</table>"+
+"<b>2. - Товар+Производитель.</b> Это значит, что товары с одинаковым названием имеют одинаковый ID и имеет большое значение ID производителя."+
+"<br>Пример:"+
+"<table class=simpleTable border=1 cellPadding=1 cellSpacing=1 >"+
+"<tr><td>ID_Товара</td><td>Наим. товара</td><td>ID_Произв</td><td>Наим. производителя</td></tr>"+
+"<tr><td>758001</td><td>Аспаркам N50 табл</td><td>6877</td><td>Галичфарм</td></tr>"+			
+"<tr><td>758001</td><td>Аспаркам N50 табл</td><td>7734</td><td>Здоров`я</td></tr>"+
+"<tr><td>758001</td><td>Аспаркам N50 табл</td><td>7464</td><td>Луганський ХФЗ</td></tr>"+
+"</table>"+
+"<b>3. - Морион.</b> В этом случае не имеют значения ID товара и производителя, т.к. привязка идет по ID товара из СПС \"Лек.средства\" Морион. Обязательное условие: код должен быть уникальным."+
+"<br>Пример:"+
+"<table class=simpleTable border=1 cellPadding=1 cellSpacing=1 >"+
+"<tr><td>ID_Товара</td><td>Наим. товара</td><td>ID_Произв</td><td>Наим. производителя</td><td>ID внешний</td></tr>"+
+"<tr><td>0</td><td>Аспаркам N50 табл</td><td>0</td><td>Галичфарм</td><td>35188</td></tr>"+			
+"<tr><td>0</td><td>Аспаркам N50 табл</td><td>0</td><td>Здоров`я</td><td>4854</td></tr>"+
+"<tr><td>0</td><td>Аспаркам N50 табл</td><td>0</td><td>Луганський ХФЗ</td><td>4856</td></tr>"+
+"</table>";
+
+pHelp_2_15 = "Нужно установить значение 1 - усли цена включает НДС  или 0 в противном случае.";
+pHelp_2_17 = "Возможные значения: 2,  3 или 4";
+pHelp_3_1 = "Любая информация";
+pHelp_4_5 = "При условии, что он уникальный";
+pHelp_4_17 = "Цена Складская заполняется только в случае, если у оптовой фирмы есть свои аптеки (им нужно для всяких расчетов/анализов/бухгалтерии и т.д.). В большинстве случаев значение остается пустым.";
+pHelp_4_20 = "<b>C</b> или <b>без НДС</b>, в зависимости от указаного признака";
+
+function xFileConstructor()
+{
+	xFile = new FileMMO;
+	xFile = new FileMMO();
+	// Заголовок документа
+	xFile.Head.Set("Строка \"<b>РАСХОДНАЯ_НАКЛАДНАЯ</b>\" ", "", "Строка", 19, 0);
+	xFile.Head.Set("ЕДРПОУ поставщика", "", "Строка", 10, 0);
+	xFile.Head.Set("ЕДРПОУ аптеки-получателя", "", "Строка", 10, 0);
+	xFile.Head.Set("Номер версии файла. Строка \"<b>версия_3</b>\"", "", "Строка", 10, 0);
+	// Реквизиты документа
+	xFile.Doc.Set("Номер документа", "", "Строка", 25, 0);
+	xFile.Doc.Set("Дата документа", "", "Дата", 10, 0);
+	xFile.Doc.Set("Номер Налоговой накладной", "", "Строка", 25, 0);
+	xFile.Doc.Set("Наименование поставщика", "", "Строка", 50, 0);
+	xFile.Doc.Set("Банк", "", "Строка", 50, 0);
+	xFile.Doc.Set("Р/с", "", "Строка", 25, 0);
+	xFile.Doc.Set("МФО", "", "Строка", 10, 0);
+	xFile.Doc.Set("Телефоны", "", "Строка", 30, 0);
+	xFile.Doc.Set("Адрес поставщика", "", "Строка", 100, 0);
+	xFile.Doc.Set("Номер лицензии", "", "Строка", 25, 0);
+	xFile.Doc.Set("Срок лицензии", "", "Дата", 10, 0);
+	xFile.Doc.Set("Сумма без НДС", "", "Число", 15, 2);
+	xFile.Doc.Set("Сумма с НДС", "", "Число", 15, 2);
+	xFile.Doc.Set("Срок оплаты", "", "Дата", 10, 0);
+	xFile.Doc.Set("Признак: цена включает НДС или не вкл.НДС", pHelp_2_15, "Число", 1, 0);
+	xFile.Doc.Set("Код метода синхронизации", pHelp_2_16, "Число", 2, 0);
+	xFile.Doc.Set("Число значащих цифр дробной части реквизита \"Сумма отпускная\" в строках документа", pHelp_2_17, "Число", 1, 0);
+	// Строка комментария
+	xFile.Comment.Set("Строка комментария", pHelp_3_1, "Строка", 200, 0);
+	// Строки документа
+	xFile.Column.Set("ID товара", "", "Строка", 20, 0);
+	xFile.Column.Set("Наименование товара", "", "Строка", 100, 0);
+	xFile.Column.Set("ID производителя", "", "Строка", 20, 0);
+	xFile.Column.Set("Наименование производителя", "", "Строка", 50, 0);
+	xFile.Column.Set("ID внешний (например Морион)", pHelp_4_5, "Строка", 20, 0);
+	xFile.Column.Set("Номер регистрации", "", "Строка", 40, 0);
+	xFile.Column.Set("Дата регистрации", "", "Дата", 10, 0);
+	xFile.Column.Set("Срок регистрации", "", "Дата", 10, 0);
+	xFile.Column.Set("Процент НДС", "", "Число", 3, 0);
+	xFile.Column.Set("Макс процент от тамож", "", "Число", 3, 0);
+	xFile.Column.Set("№ Серии", "", "Строка", 16, 0);
+	xFile.Column.Set("Номер сертификата", "", "Строка", 20, 0);
+	xFile.Column.Set("Дата сертификата", "", "Дата", 10, 0);
+	xFile.Column.Set("Срок годности", "", "Дата", 10, 0);
+	xFile.Column.Set("Ед Изм", "", "Строка", 5, 0);
+	xFile.Column.Set("Количество", "", "Число", 15, 3);
+	xFile.Column.Set("Цена Складская", "", "Число", 16, 4);
+	xFile.Column.Set("Цена Таможенная", "", "Число", 16, 4);
+	xFile.Column.Set("Процент наценки поставщика", "", "Число", 6, 2);
+	xFile.Column.Set("Цена Отпускная (для аптеки это закупочная)", pHelp_4_20, "Число", 16, 4);
+	xFile.Column.Set("Сумма отпускная", pHelp_4_20, "Число", 16, 4);
+}
+
+xFileConstructor();
+
+pArrayMenu[0] = 
+"<br><BLOCKQUOTE><p>Назначение электронной накладной - автоматизировать ввод расходной накладной компании-поставщика в учетную систему контрагента-получателя в качестве приходного документа, заменив традиционный интерактивный ввод.</p>"+
+"<p>Предлагаемый формат представляет текстовый файл, состоящий из 4 секций:"+
+"<dir>"+
+"<li>Секция 1. Заголовок файла: параметры идентификации типа файла, поставщика и получателя товара."+
+"<li>Секция 2. Реквизиты документа, информация о поставщике, свойства синхронизации данных."+
+"<li>Секция 3. Строка, содержащая любую информацию."+
+"<li>Секция 4. Строки спецификации документа."+
+"</dir></p>"+
+"<p>Преимущества текстового варианта электронной накладной:"+
+"<dir>"+
+"<li>визуальный контроль файла при помощи любого текстового редактора;"+
+"<li>минимальный размер файла;"+
+"<li>возможность разработки различными средствами разработки;"+
+"<li>минимальное время создания и поддержки."+
+"</dir><p></BLOCKQUOTE>";
+
+pArrayMenu[1] = "<br><center><h5>Структура файла (*.MMO)</h5>"+
+"<table class=simpleTable border=1 cellPadding=1 cellSpacing=1 width=\"90%\">"+
+"<tr><td align=center>№ стр.</td><td align=center>Поле</td><td align=center>Тип</td><td align=center>Длина</td></tr>";
+for (j=1; j<5; j++)
+{
+	pArrayMenu[1] += "<tr><td colspan=4 align=center><b>Секция "+j+"</b></td></tr>";
+	switch (j)
+	{
+		case 1: pSection = xFile.Head; break;
+		case 2: pSection = xFile.Doc; break;
+		case 3: pSection = xFile.Comment; break;
+		case 4: pSection = xFile.Column; break;
+	}
+	for (i in pSection.Name)
+	{
+		pWidth = pSection.Width[i];
+		if (pSection.Decimal[i]) pWidth += "."+pSection.Decimal[i];
+		pArrayMenu[1] += "<tr><td align=center>"+(parseInt(i) + 1)+"</td><td>"+pSection.Name[i]+"</td><td>"+pSection.Type[i]+"</td><td align=center>"+pWidth+"</td></tr>";
+	}
+}
+pArrayMenu[1] += "</table></center><br>";
+
+pArrayMenu[2] = "<br><BLOCKQUOTE><p>Файл состоит из четырех секций. Секции 1, 2 и 3 записываются как отдельные строки, секция 4 состоит из подмножества строк соответствующих строкам документа. Реквизиты в строках разделяются символом <b>Horizontal tab</b> (#09).</p>"+
+"<h5>Пояснения к некоторым полям:</h5><dir>";
+
+for (j=1; j<5; j++)
+{
+	switch (j)
+	{
+		case 1: pSection = xFile.Head; break;
+		case 2: pSection = xFile.Doc; break;
+		case 3: pSection = xFile.Comment; break;
+		case 4: pSection = xFile.Column; break;
+	}
+	for (i in pSection.Comment)
+	{
+		if (pSection.Comment[i].length)
+		{
+			pArrayMenu[2] += "<li><i>"+pSection.Name[i]+"</i><br>";
+			pArrayMenu[2] += pSection.Comment[i];
+		}
+	}
+}
+pArrayMenu[2] += "</dir></BLOCKQUOTE>";
+
+function FillElementArray(prInd, prNum)
+{
+	pRes = "";
+	switch (prInd)
+	{
+		case 3:
+		switch (prNum)
+		{
+			case 1:
+			
+pRes +=
+"<br><u><b>Пример № 1.</b></u><br>"+
+"<XMP>РАСХОДНАЯ_НАКЛАДНАЯ	09485833	01236743	версия_3</XMP>"+
+"<XMP>Рн-0000123	27.05.02	Нн-0000321	АО \"Цейлон\"	Укрсоцбанк	26007200002153	322012	888-77-66, 777-88-99	м. Київ. пр Перемоги 38	НН47490	31.12.04	775.31	930.37	15.06.02	0	1	4</XMP>"+
+"<XMP>С новым годом!</XMP>"+
+"<XMP>50234	Анафранил 25мг N30 табл.	569	Сиба-Гейги	0	РЕГ-049673/123	20.07.00	20.07.05	20	35	4502НГ	АА789234	03.03.02	01.07.04	уп	10.5	50.1111	54.3321	9.44	59.4611	624.3416</XMP>"+
+"<XMP>50337	Анафранил 25мг N30 табл.	679	Новартис Фарма	0	ОП-35435	27.03.99	27.03.04	20	35	Д8856736	ЩЩ456446	02.04.02	01.03.03	уп	2.5	51.0111	55.0134	9.77	60.3882	150.9705</XMP>";
+			break;
+			case 2:
+			case 3:
+			// Empty
+			break;
+		}
+		break;
+		case 4:
+pRes = "<br><br><center><P>Файл электронной накладной (<b>*.MMO</b>) :";
+		switch (prNum)
+		{
+			case 1:
+pRes += "<br><br><input type=file name=\"filename\" size=40 value=\"d:\\test.mmo\" >";
+			break;
+			case 2:
+pRes += "<br><br><textarea id=TxtFile style=\"height: 100px; overflow: scroll; width: 300px\"></textarea>";
+			break;
+		}
+pRes += "<br><br><input type=button value=\"Прочитать\" onclick=\"readfile("+prNum+")\" id=button1 name=button1></P></center>";
+		break;
+	}
+	pArrayMenu[prInd] = pRes;
+}
+
+// events
+window.onresize=change;
+window.onload=change;
+document.onmouseover = DocMouseOver;
+document.onmouseout = DocMouseOut;
+document.onclick = DocMouseOutClick;
+
+	
+</SCRIPT>
+
+<BODY topmargin=10>
+
+<table class=BasicTable ID=MainTable bgcolor=#f5f5f5 border=1  bordercolor=#ffffff cellpadding=0 cellspacing=0 width=640 height=400 >
+<tr height=70 align=middle>
+<td width=145>&nbsp;</td>
+<td>
+<font id=TxtTitle style="FILTER: glow(Color =#FF00000,Strength=2,enabled=0) blendTrans(duration=5); LETTER-SPACING: 3pt; WIDTH: 100%">Электронная накладная</font>
+</td>
+</tr>
+<tr> 
+<td > 
+	<TABLE class=menuTable border=0 width="100%" STYLE="LEFT: 12px; POSITION: absolute; TOP: 200px">
+	<TR><TD id=Menu1 >&nbsp;Назначение</TD></TR>
+	<TR><TD id=Menu2 >&nbsp;Структура файла</TD></TR>
+	<TR><TD id=Menu3 >&nbsp;Описание формата</TD></TR>
+	<TR><TD id=Menu4 >&nbsp;Примеры …</TD></TR>
+	<TR><TD id=Menu5 >&nbsp;Проверка …</TD></TR>
+	</TABLE>
+</td>
+<td>&nbsp;</td>
+</tr>
+</table>
+
+<div id=TxtANR style="text-align:center; color=#000080; position:absolute; left:15;top:15; width:140; hight:70; filter: revealTrans(Transition=12, Duration=2)"></div>
+<div id=Div1 STYLE="HEIGHT: 189px; LEFT: 159px; OVERFLOW: scroll; POSITION: absolute; TOP: 83px; WIDTH: 175px"></div>
+
+<script>
+
+pMenu[0] = new NewMenu(4, 251, "вариант № 1", "вариант № 2", "вариант № 3");
+pMenu[1] = new NewMenu(5, 271, "с использованием ActiveX: <b>FileSystemObject</b>", "с использованием <b>Text Area</b>");
+
+function NewMenu(prNum, prTop)
+{
+	this.NumMenu = prNum;
+	this.QItem = arguments.length - 2;
+	this.txt = "<table class=menuTable border=1 id=TMenu"+prNum+" style='visibility = hidden; LEFT: 160; POSITION: absolute; TOP:"+prTop+"; ' borderColor='#e0e0e0' cellPadding=0 cellSpacing=0><tr><td>";
+	this.txt += "<table class=menuTable border=1 borderColor='#f5f5f5' cellPadding=0 cellSpacing=0>";
+	for(i=2; i<arguments.length; i++)
+		this.txt += "<TR><TD id=Menu"+prNum+(i-1)+" >&nbsp;"+arguments[i]+"&nbsp;</TD></TR>";
+	this.txt += "</table></td></tr>";
+	this.txt += "</table>";
+}
+
+document.write (pMenu[0].txt);
+document.write (pMenu[1].txt);
+
+</script>
+
+</BODY>
+</HTML>
